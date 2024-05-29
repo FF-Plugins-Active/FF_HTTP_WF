@@ -10,6 +10,24 @@
 
 #include "FF_HTTP_WF_Server.generated.h"
 
+UCLASS(BlueprintType)
+class FF_HTTP_WF_API UHttpRequestWf : public UObject
+{
+	GENERATED_BODY()
+	
+public:
+
+	WFHttpTask* Task = nullptr;
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool SendResponse(FString In_Response = "<html>Hello World!</html>");
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetRequestUri(FString& Out_Uri);
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegateRequestWf, UHttpRequestWf*, Request);
+
 UCLASS()
 class FF_HTTP_WF_API AHTTP_Server_WF : public AActor
 {
@@ -36,16 +54,16 @@ public:
 #endif
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	void OnHttpAdvStart();
+	void OnHttWf_Start();
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	void OnHttpAdvStop();
+	void OnHttWf_Stop();
 
-	//UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	//void OnHttpAdvMessage(UHttpConnectionNghttp2* Connection);
+	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	void OnHttWf_Request(UHttpRequestWf* Request);
 
-	//UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	//FDelegateNghttp2 DelegateHttpMessageAdv;
+	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	FDelegateRequestWf DelegateHttpRequest;
 
 public:
 

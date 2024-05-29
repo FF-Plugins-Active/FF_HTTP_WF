@@ -20,6 +20,7 @@ THIRD_PARTY_INCLUDES_START
 #include <stdio.h>
 
 #include "workflow/WFHttpServer.h"
+#include "workflow/HttpUtil.h"
 
 #include "Windows/HideWindowsPlatformTypes.h"
 

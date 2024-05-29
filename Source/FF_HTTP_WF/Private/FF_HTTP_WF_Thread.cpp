@@ -37,7 +37,8 @@ uint32 FHTTP_Thread_WF::Run()
 {
 	while (this->bStartThread)
 	{
-		
+		//FDateTime Now;
+		//UE_LOG(LogTemp, Display, TEXT("Workflow server is running : %s"), *Now.ToString());
 	}
 
 	return 0;
@@ -64,9 +65,15 @@ bool FHTTP_Thread_WF::Toggle(bool bIsPause)
 
 void FHTTP_Thread_WF::Callback_HTTP_Start()
 {	
-	auto Callback = [](WFHttpTask* task)
+	auto Callback = [this](WFHttpTask* Task)
 	{
-		task->get_resp()->append_output_body("<html>Eray Test</html>");
+		UHttpRequestWf* Request = NewObject<UHttpRequestWf>();
+		Request->Task = Task;
+
+		
+
+		this->Parent_Actor->OnHttWf_Request(Request);
+		this->Parent_Actor->DelegateHttpRequest.Broadcast(Request);
 	};
 
 	this->WF_Server = MakeShared<WFHttpServer, ESPMode::ThreadSafe>(Callback);
