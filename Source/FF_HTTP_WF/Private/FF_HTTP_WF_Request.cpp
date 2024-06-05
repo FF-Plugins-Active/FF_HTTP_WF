@@ -436,6 +436,35 @@ bool UHttpRequestWf::SendResponse_String(TMap<FString, FString> In_Headers, FStr
 	return this->Task->get_resp()->append_output_body(TCHAR_TO_UTF8(*In_Response));
 }
 
+bool UHttpRequestWf::SendResponse_Buffer(TMap<FString, FString> In_Headers, TArray<uint8> In_Response, EWfStatusCodes In_Status, EWfContentTypes In_ContentTypes)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	if (In_Response.IsEmpty())
+	{
+		return false;
+	}
+
+	this->Task->get_resp()->set_http_version("HTTP/1.1");
+
+	// Set Mime Type.
+	this->Task->get_resp()->add_header_pair("Content-Type", this->ConvertToWfMime(In_ContentTypes));
+
+	// Add Headers.
+	for (TPair<FString, FString> EachHeader : In_Headers)
+	{
+		this->Task->get_resp()->add_header_pair(TCHAR_TO_UTF8(*EachHeader.Key), TCHAR_TO_UTF8(*EachHeader.Value));
+	}
+
+	// Set Status.
+	HttpUtil::set_response_status(this->Task->get_resp(), this->ConvertToWfStatus(In_Status));
+	
+	return this->Task->get_resp()->append_output_body(In_Response.GetData(), In_Response.Num());
+}
+
 bool UHttpRequestWf::GetRequestUri(FString& Out_Uri)
 {
 	if (!this->Task)
@@ -455,4 +484,100 @@ bool UHttpRequestWf::GetRequestUri(FString& Out_Uri)
 	{
 		return false;
 	}
+}
+
+bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	this->Task->get_req()->get_parser()->header_list;
+
+	return false;
+}
+
+bool UHttpRequestWf::GetHeader(FString& Value, FString Key)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool UHttpRequestWf::GetRequestQuery(TMap<FString, FString>& Out_Headers, FString& Query_Title)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool UHttpRequestWf::GetBody(FString& Out_Body)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	size_t BodySize = this->Task->get_req()->get_output_body_size();
+	const void* Buffer = malloc(BodySize);
+	this->Task->get_req()->get_parsed_body(&Buffer, &BodySize);
+
+	FString TempBody;
+	TempBody.AppendChars((char*)Buffer, BodySize);
+
+	if (TempBody.IsEmpty())
+	{
+		return false;
+	}
+
+	Out_Body = TempBody;
+
+	return false;
+}
+
+bool UHttpRequestWf::GetMethod(FString& Out_Method)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool UHttpRequestWf::GetContentLenght(int32& Out_Lenght)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool UHttpRequestWf::GetClientAddress(FString& Out_Address)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
+}
+
+bool UHttpRequestWf::GetHostName(FString& Out_Host)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	return false;
 }

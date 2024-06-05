@@ -16,7 +16,7 @@ THIRD_PARTY_INCLUDES_START
 
 #include "workflow/WFHttpServer.h"
 #include "workflow/HttpUtil.h"
-
+#include "workflow/list.h"
 #include "Windows/HideWindowsPlatformTypes.h"
 
 #pragma comment (lib, "Ws2_32.lib")
@@ -52,7 +52,34 @@ public:
 	virtual bool SendResponse_String(TMap<FString, FString> In_Headers, FString In_Response, EWfStatusCodes In_Status = EWfStatusCodes::OK_200, EWfContentTypes In_ContentTypes = EWfContentTypes::Text_Plain);
 
 	UFUNCTION(BlueprintCallable)
+	virtual bool SendResponse_Buffer(TMap<FString, FString> In_Headers, TArray<uint8> In_Response, EWfStatusCodes In_Status = EWfStatusCodes::OK_200, EWfContentTypes In_ContentTypes = EWfContentTypes::Text_Plain);
+
+	UFUNCTION(BlueprintCallable)
 	virtual bool GetRequestUri(FString& Out_Uri);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetAllHeaders(TMap<FString, FString>& Out_Headers);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetHeader(FString& Value, FString Key);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetRequestQuery(TMap<FString, FString>& Out_Headers, FString& Query_Title);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetBody(FString& Out_Body);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetMethod(FString& Out_Method);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetContentLenght(int32& Out_Lenght);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetClientAddress(FString& Out_Address);
+
+	UFUNCTION(BlueprintCallable)
+	virtual bool GetHostName(FString& Out_Host);
 
 };
 
