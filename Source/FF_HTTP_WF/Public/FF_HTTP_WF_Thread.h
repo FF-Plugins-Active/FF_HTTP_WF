@@ -59,22 +59,17 @@ public:
 
 private:
 
+	bool bStartThread = false;
+	FRunnableThread* RunnableThread = nullptr;
+	
+	TSharedPtr<WFHttpServer, ESPMode::ThreadSafe> WF_Server;
+
 	virtual void Callback_HTTP_Start();
 	virtual void Callback_HTTP_Stop();
 
+	FString API_URI = "";
 	int32 Port_HTTP = 8081;
 	int32 Port_HTTPS = 8443;
-
-	FString Server_Address_HTTPS = "";
-	FString Server_Address_HTTP = "";
-	FString Server_Path_Root = "";
-	FString API_URI = "";
-
-private:
-
-	FRunnableThread* RunnableThread = nullptr;
-	bool bStartThread = false;
-
-	TSharedPtr<WFHttpServer, ESPMode::ThreadSafe> WF_Server;
+	int32 ThreadNum = 4;
 
 };

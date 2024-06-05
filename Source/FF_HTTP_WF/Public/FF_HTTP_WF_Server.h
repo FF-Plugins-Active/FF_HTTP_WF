@@ -7,26 +7,9 @@
 
 // Threads.
 #include "FF_HTTP_WF_Thread.h"
+#include "FF_HTTP_WF_Request.h"
 
 #include "FF_HTTP_WF_Server.generated.h"
-
-UCLASS(BlueprintType)
-class FF_HTTP_WF_API UHttpRequestWf : public UObject
-{
-	GENERATED_BODY()
-	
-public:
-
-	WFHttpTask* Task = nullptr;
-
-	UFUNCTION(BlueprintCallable)
-	virtual bool SendResponse(FString In_Response = "<html>Hello World!</html>");
-
-	UFUNCTION(BlueprintCallable)
-	virtual bool GetRequestUri(FString& Out_Uri);
-};
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegateRequestWf, UHttpRequestWf*, Request);
 
 UCLASS()
 class FF_HTTP_WF_API AHTTP_Server_WF : public AActor
@@ -67,11 +50,11 @@ public:
 
 public:
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FString Server_Path_Root = "";
+	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "If you want to change API parameter, just put /* to the end. If you don't do that, server won't detect dynamic API requests.", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	FString API_URI = "api/*";
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FString Server_Path_404 = "";
+	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "It shouldn't bigger than 15 chars and it has to be unique.", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	FString Server_Name = "";
 
 	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
 	int32 Port_HTTP = 8081;
@@ -79,11 +62,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
 	int32 Port_HTTPS = 8453;
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "If you want to change API parameter, just put /* to the end. If you don't do that, server won't detect dynamic API requests.", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FString API_URI = "api/*";
-
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "It shouldn't bigger than 15 chars and it has to be unique.", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FString Server_Name = "";
+	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|POCO")
+	int32 ThreadNum = 4;
 
 public:
 

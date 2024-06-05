@@ -12,6 +12,8 @@ FHTTP_Thread_WF::FHTTP_Thread_WF(AHTTP_Server_WF* In_Parent_Actor)
 	
 	this->Port_HTTP = this->Parent_Actor->Port_HTTP;
 	this->Port_HTTPS = this->Parent_Actor->Port_HTTPS;
+	this->ThreadNum = this->Parent_Actor->ThreadNum;
+	this->API_URI = this->Parent_Actor->API_URI;
 
 	this->RunnableThread = FRunnableThread::Create(this, *this->Parent_Actor->Server_Name);
 }
@@ -69,8 +71,6 @@ void FHTTP_Thread_WF::Callback_HTTP_Start()
 	{
 		UHttpRequestWf* Request = NewObject<UHttpRequestWf>();
 		Request->Task = Task;
-
-		
 
 		this->Parent_Actor->OnHttWf_Request(Request);
 		this->Parent_Actor->DelegateHttpRequest.Broadcast(Request);
