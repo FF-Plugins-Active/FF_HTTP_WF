@@ -2,8 +2,6 @@
 
 int UHttpRequestWf::ConvertToWfStatus(EWfStatusCodes In_Status)
 {
-	StatusStruct Status;
-
 	switch (In_Status)
 	{
 	case EWfStatusCodes::Continue_100:
@@ -413,7 +411,7 @@ const char* UHttpRequestWf::ConvertToWfMime(EWfContentTypes In_ContenTypes)
 	}
 }
 
-bool UHttpRequestWf::SendResponse_String(TMap<FString, FString> In_Headers, FString In_Response, EWfStatusCodes In_Status = EWfStatusCodes::OK_200, EWfContentTypes In_ContentTypes = EWfContentTypes::Text_Plain)
+bool UHttpRequestWf::SendResponse_String(TMap<FString, FString> In_Headers, FString In_Response, EWfStatusCodes In_Status, EWfContentTypes In_ContentTypes)
 {
 	if (!this->Task)
 	{
