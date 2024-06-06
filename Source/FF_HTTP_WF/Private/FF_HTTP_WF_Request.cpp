@@ -493,9 +493,30 @@ bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 		return false;
 	}
 
-	this->Task->get_req()->get_parser()->header_list;
+	std::string TempName;
+	std::string TempValue;
 
-	return false;
+	protocol::HttpHeaderCursor req_cursor(this->Task->get_req());
+
+	TMap<FString, FString> Temp_Headers;
+	while (req_cursor.next(TempName, TempValue))
+	{
+		FString Key = TempName.c_str();
+		FString Value = TempValue.c_str();
+
+		Temp_Headers.Add(Key, Value);
+	}
+
+	if (Temp_Headers.IsEmpty())
+	{
+		return false;
+	}
+
+	else
+	{
+		Out_Headers = Temp_Headers;
+		return true;
+	}
 }
 
 bool UHttpRequestWf::GetHeader(FString& Value, FString Key)
@@ -525,21 +546,18 @@ bool UHttpRequestWf::GetBody(FString& Out_Body)
 		return false;
 	}
 
-	size_t BodySize = this->Task->get_req()->get_output_body_size();
-	const void* Buffer = malloc(BodySize);
-	this->Task->get_req()->get_parsed_body(&Buffer, &BodySize);
-
-	FString TempBody;
-	TempBody.AppendChars((char*)Buffer, BodySize);
+	FString TempBody = HttpUtil::decode_chunked_body(this->Task->get_req()).c_str();
 
 	if (TempBody.IsEmpty())
 	{
 		return false;
 	}
 
-	Out_Body = TempBody;
-
-	return false;
+	else
+	{
+		Out_Body = TempBody;
+		return true;
+	}
 }
 
 bool UHttpRequestWf::GetMethod(FString& Out_Method)
