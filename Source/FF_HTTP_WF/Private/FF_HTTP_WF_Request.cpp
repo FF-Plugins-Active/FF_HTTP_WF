@@ -1,5 +1,9 @@
 #include "FF_HTTP_WF_Request.h"
 
+THIRD_PARTY_INCLUDES_START
+#include <locale.h>
+THIRD_PARTY_INCLUDES_END
+
 int UHttpRequestWf::ConvertToWfStatus(EWfStatusCodes In_Status)
 {
 	switch (In_Status)
@@ -501,8 +505,8 @@ bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 	TMap<FString, FString> Temp_Headers;
 	while (req_cursor.next(TempName, TempValue))
 	{
-		FString Key = TempName.c_str();
-		FString Value = TempValue.c_str();
+		FString Key = UTF8_TO_TCHAR(TempName.c_str());
+		FString Value = UTF8_TO_TCHAR(TempValue.c_str());
 
 		Temp_Headers.Add(Key, Value);
 	}
@@ -546,7 +550,7 @@ bool UHttpRequestWf::GetBody(FString& Out_Body)
 		return false;
 	}
 
-	FString TempBody = HttpUtil::decode_chunked_body(this->Task->get_req()).c_str();
+	FString TempBody = UTF8_TO_TCHAR(HttpUtil::decode_chunked_body(this->Task->get_req()).c_str());
 
 	if (TempBody.IsEmpty())
 	{
