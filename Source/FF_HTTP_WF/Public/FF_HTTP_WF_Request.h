@@ -58,13 +58,13 @@ public:
 	virtual bool GetRequestUri(FString& Out_Uri);
 
 	UFUNCTION(BlueprintCallable)
+	virtual bool GetRequestQuery(TMap<FString, FString>& Out_Query, FString& Query_Title);
+
+	UFUNCTION(BlueprintCallable)
 	virtual bool GetAllHeaders(TMap<FString, FString>& Out_Headers);
 
 	UFUNCTION(BlueprintCallable)
-	virtual bool GetHeader(FString& Value, FString Key);
-
-	UFUNCTION(BlueprintCallable)
-	virtual bool GetRequestQuery(TMap<FString, FString>& Out_Headers, FString& Query_Title);
+	virtual bool GetHeader(FString& ErrorCode, FString& Value, FString Key);
 
 	UFUNCTION(BlueprintCallable)
 	virtual bool GetBody(FString& Out_Body);
@@ -77,9 +77,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	virtual bool GetClientAddress(FString& Out_Address);
-
-	UFUNCTION(BlueprintCallable)
-	virtual bool GetHostName(FString& Out_Host);
 
 };
 

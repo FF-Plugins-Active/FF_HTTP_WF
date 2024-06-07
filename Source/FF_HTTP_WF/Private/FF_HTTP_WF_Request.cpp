@@ -1,8 +1,7 @@
 #include "FF_HTTP_WF_Request.h"
 
-THIRD_PARTY_INCLUDES_START
-#include <locale.h>
-THIRD_PARTY_INCLUDES_END
+// UE Includes.
+#include "Kismet/KismetStringLibrary.h"
 
 int UHttpRequestWf::ConvertToWfStatus(EWfStatusCodes In_Status)
 {
@@ -490,6 +489,100 @@ bool UHttpRequestWf::GetRequestUri(FString& Out_Uri)
 	}
 }
 
+bool UHttpRequestWf::GetRequestQuery(TMap<FString, FString>& Out_Query, FString& Query_Title)
+{
+	if (!this->Task)
+	{
+		return false;
+	}
+
+	FString RequestUri;
+	this->GetRequestUri(RequestUri);
+	TArray<FString> Sections_Uri = UKismetStringLibrary::ParseIntoArray(RequestUri, "/");
+
+	// We need to check if request uri is only root or not.
+	if (Sections_Uri.IsEmpty())
+	{
+		return false;
+	}
+
+	FString LastSection = Sections_Uri.Last();
+
+	// Correct query contains "?" in it.
+	if (!LastSection.Contains("?"))
+	{
+		return false;
+	}
+
+	TArray<FString> Sections_Query = UKismetStringLibrary::ParseIntoArray(LastSection, "?");
+	int SectionSize = Sections_Query.Num();
+
+	// If URI contains multiple param declaration or doesn't contain at all, return false. 
+	if (SectionSize == 0 || SectionSize > 2)
+	{
+		return false;
+	}
+
+	FString SourceString;
+	if (SectionSize == 1)
+	{
+		SourceString = Sections_Query[0];
+	}
+
+	// Sometimes query contains title like "/params?color=blue".
+	else if (SectionSize == 2)
+	{
+		Query_Title = Sections_Query[0];
+		SourceString = Sections_Query[1];
+	}
+
+	// Check if there are multiple parameter for query.
+	if (SourceString.Contains("&"))
+	{
+		TArray<FString> Sections_Query_Params = UKismetStringLibrary::ParseIntoArray(SourceString, "&");
+
+		if (Sections_Query_Params.IsEmpty())
+		{
+			return false;
+		}
+
+		TMap<FString, FString> TempQueries;
+		for (FString EachParamPair : Sections_Query_Params)
+		{
+			TArray<FString> ParamPairArray = UKismetStringLibrary::ParseIntoArray(EachParamPair, "=");
+
+			if (ParamPairArray.Num() != 2)
+			{
+				continue;
+			}
+
+			FString Key = ParamPairArray[0];
+			FString Value = ParamPairArray[1];
+
+			TempQueries.Add(Key, Value);
+		}
+
+		Out_Query = TempQueries;
+	}
+
+	else
+	{
+		TArray<FString> ParamPairArray = UKismetStringLibrary::ParseIntoArray(SourceString, "=");
+
+		if (ParamPairArray.Num() != 2)
+		{
+			return false;
+		}
+
+		FString Key = ParamPairArray[0];
+		FString Value = ParamPairArray[1];
+
+		Out_Query.Add(Key, Value);
+	}
+
+	return true;
+}
+
 bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 {
 	if (!this->Task)
@@ -523,24 +616,33 @@ bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 	}
 }
 
-bool UHttpRequestWf::GetHeader(FString& Value, FString Key)
+bool UHttpRequestWf::GetHeader(FString& ErrorCode, FString& Value, FString Key)
 {
 	if (!this->Task)
 	{
+		ErrorCode = "WF - Task for HTTP Request is null !";
 		return false;
 	}
-
-	return false;
-}
-
-bool UHttpRequestWf::GetRequestQuery(TMap<FString, FString>& Out_Headers, FString& Query_Title)
-{
-	if (!this->Task)
+	
+	if (!HttpHeaderMap(this->Task->get_req()).key_exists(TCHAR_TO_UTF8(*Key)))
 	{
+		ErrorCode = "WF - HTTP request header is not exist !";
 		return false;
 	}
 
-	return false;
+	FString TempValue = UTF8_TO_TCHAR(HttpHeaderMap(this->Task->get_req()).get(TCHAR_TO_UTF8(*Key)).c_str());
+
+	if (TempValue.IsEmpty())
+	{
+		ErrorCode = "WF - HTTP request header is exist but value is empty !";
+		return false;
+	}
+
+	else
+	{
+		Value = TempValue;
+		return true;
+	}
 }
 
 bool UHttpRequestWf::GetBody(FString& Out_Body)
@@ -571,6 +673,8 @@ bool UHttpRequestWf::GetMethod(FString& Out_Method)
 		return false;
 	}
 
+	Out_Method = this->Task->get_req()->get_method();
+
 	return false;
 }
 
@@ -580,6 +684,8 @@ bool UHttpRequestWf::GetContentLenght(int32& Out_Lenght)
 	{
 		return false;
 	}
+
+	Out_Lenght = this->Task->get_req()->get_parser()->content_length;
 
 	return false;
 }
@@ -591,15 +697,31 @@ bool UHttpRequestWf::GetClientAddress(FString& Out_Address)
 		return false;
 	}
 
-	return false;
-}
+	sockaddr SocketAddress;
+	memset(&SocketAddress, 0, sizeof(SocketAddress));
+	socklen_t SocketLenght = sizeof SocketAddress;
 
-bool UHttpRequestWf::GetHostName(FString& Out_Host)
-{
-	if (!this->Task)
+	this->Task->get_peer_addr(&SocketAddress, &SocketLenght);
+	
+	char IP_Address[NI_MAXHOST];
+	char Port[NI_MAXSERV];
+	int ErrorCode = getnameinfo(&SocketAddress, sizeof(SocketAddress), IP_Address, sizeof(IP_Address), Port, sizeof(Port), NI_NUMERICHOST | NI_NUMERICSERV);
+
+	if (ErrorCode != 0)
 	{
 		return false;
 	}
 
-	return false;
+	else
+	{
+		FString IpString;
+		IpString.AppendChars(IP_Address, sizeof(IP_Address));
+
+		FString PortString;
+		PortString.AppendChars(Port, sizeof(Port));
+
+		Out_Address = FString::Printf(TEXT("%s:%s"), *IpString, *PortString);
+
+		return true;
+	}
 }
