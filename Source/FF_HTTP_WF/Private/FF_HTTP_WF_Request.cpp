@@ -1,8 +1,5 @@
 #include "FF_HTTP_WF_Request.h"
 
-// UE Includes.
-#include "Kismet/KismetStringLibrary.h"
-
 int UHttpRequestWf::ConvertToWfStatus(EWfStatusCodes In_Status)
 {
 	switch (In_Status)
@@ -421,22 +418,40 @@ bool UHttpRequestWf::SendResponse_String(TMap<FString, FString> In_Headers, FStr
 		return false;
 	}
 
-	this->Task->get_resp()->set_http_version("HTTP/1.1");
+	bool bIsSuccessful = false;
 
-	// Set Mime Type.
-	this->Task->get_resp()->add_header_pair("Content-Type", this->ConvertToWfMime(In_ContentTypes));
-
-	// Add Headers.
-	for (TPair<FString, FString> EachHeader : In_Headers)
+	try
 	{
-		this->Task->get_resp()->add_header_pair(TCHAR_TO_UTF8(*EachHeader.Key), TCHAR_TO_UTF8(*EachHeader.Value));
+		protocol::HttpResponse* TempResponse = Task->get_resp();
+
+		// Set HTTP Version.
+		TempResponse->set_http_version("HTTP/1.1");
+
+		// Set Mime Type.
+		TempResponse->add_header_pair("Content-Type", this->ConvertToWfMime(In_ContentTypes));
+
+		// Add Headers.
+		for (TPair<FString, FString> EachHeader : In_Headers)
+		{
+			TempResponse->add_header_pair(TCHAR_TO_UTF8(*EachHeader.Key), TCHAR_TO_UTF8(*EachHeader.Value));
+		}
+
+		// Set Status.
+		HttpUtil::set_response_status(this->Task->get_resp(), this->ConvertToWfStatus(In_Status));
+
+		// Set Response as String.
+		bIsSuccessful = TempResponse->append_output_body(TCHAR_TO_UTF8(*In_Response));
 	}
 
-	// Set Status.
-	HttpUtil::set_response_status(this->Task->get_resp(), this->ConvertToWfStatus(In_Status));
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->SendResponse_String : %s"), *ExceptionString);
 
-	// Set Response as String.
-	return this->Task->get_resp()->append_output_body(TCHAR_TO_UTF8(*In_Response));
+		return false;
+	}
+
+	return bIsSuccessful;
 }
 
 bool UHttpRequestWf::SendResponse_Buffer(TMap<FString, FString> In_Headers, TArray<uint8> In_Response, EWfStatusCodes In_Status, EWfContentTypes In_ContentTypes)
@@ -451,21 +466,40 @@ bool UHttpRequestWf::SendResponse_Buffer(TMap<FString, FString> In_Headers, TArr
 		return false;
 	}
 
-	this->Task->get_resp()->set_http_version("HTTP/1.1");
+	bool bIsSuccessful = false;
 
-	// Set Mime Type.
-	this->Task->get_resp()->add_header_pair("Content-Type", this->ConvertToWfMime(In_ContentTypes));
-
-	// Add Headers.
-	for (TPair<FString, FString> EachHeader : In_Headers)
+	try
 	{
-		this->Task->get_resp()->add_header_pair(TCHAR_TO_UTF8(*EachHeader.Key), TCHAR_TO_UTF8(*EachHeader.Value));
+		protocol::HttpResponse* TempResponse = Task->get_resp();
+
+		// Set HTTP Version.
+		TempResponse->set_http_version("HTTP/1.1");
+
+		// Set Mime Type.
+		TempResponse->add_header_pair("Content-Type", this->ConvertToWfMime(In_ContentTypes));
+
+		// Add Headers.
+		for (TPair<FString, FString> EachHeader : In_Headers)
+		{
+			TempResponse->add_header_pair(TCHAR_TO_UTF8(*EachHeader.Key), TCHAR_TO_UTF8(*EachHeader.Value));
+		}
+
+		// Set Status.
+		HttpUtil::set_response_status(this->Task->get_resp(), this->ConvertToWfStatus(In_Status));
+
+		// Set Response as Buffer.
+		bIsSuccessful = TempResponse->append_output_body(In_Response.GetData(), In_Response.Num());
 	}
 
-	// Set Status.
-	HttpUtil::set_response_status(this->Task->get_resp(), this->ConvertToWfStatus(In_Status));
-	
-	return this->Task->get_resp()->append_output_body(In_Response.GetData(), In_Response.Num());
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->SendResponse_Buffer : %s"), *ExceptionString);
+
+		return false;
+	}
+
+	return bIsSuccessful;
 }
 
 bool UHttpRequestWf::GetRequestUri(FString& Out_Uri)
@@ -475,18 +509,28 @@ bool UHttpRequestWf::GetRequestUri(FString& Out_Uri)
 		return false;
 	}
 
-	const char* RequestUri = this->Task->get_req()->get_request_uri();
+	const char* RequestUri = nullptr;
 
-	if (strlen(RequestUri) > 0)
+	try
 	{
-		Out_Uri = RequestUri;
-		return true;
+		RequestUri = this->Task->get_req()->get_request_uri();
 	}
 
-	else
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetRequestUri : %s"), *ExceptionString);
+
+		return false;
+	}
+
+	if (strlen(RequestUri) <= 0)
 	{
 		return false;
 	}
+
+	Out_Uri = RequestUri;
+	return true;
 }
 
 bool UHttpRequestWf::GetRequestQuery(TMap<FString, FString>& Out_Query, FString& Query_Title)
@@ -497,7 +541,12 @@ bool UHttpRequestWf::GetRequestQuery(TMap<FString, FString>& Out_Query, FString&
 	}
 
 	FString RequestUri;
-	this->GetRequestUri(RequestUri);
+
+	if (!this->GetRequestUri(RequestUri))
+	{
+		return false;
+	}
+
 	TArray<FString> Sections_Uri = UKismetStringLibrary::ParseIntoArray(RequestUri, "/");
 
 	// We need to check if request uri is only root or not.
@@ -592,16 +641,26 @@ bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 
 	std::string TempName;
 	std::string TempValue;
-
-	protocol::HttpHeaderCursor req_cursor(this->Task->get_req());
-
 	TMap<FString, FString> Temp_Headers;
-	while (req_cursor.next(TempName, TempValue))
-	{
-		FString Key = UTF8_TO_TCHAR(TempName.c_str());
-		FString Value = UTF8_TO_TCHAR(TempValue.c_str());
 
-		Temp_Headers.Add(Key, Value);
+	try
+	{
+		protocol::HttpHeaderCursor req_cursor(this->Task->get_req());
+		while (req_cursor.next(TempName, TempValue))
+		{
+			FString Key = UTF8_TO_TCHAR(TempName.c_str());
+			FString Value = UTF8_TO_TCHAR(TempValue.c_str());
+
+			Temp_Headers.Add(Key, Value);
+		}
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetAllHeaders : %s"), *ExceptionString);
+
+		return false;
 	}
 
 	if (Temp_Headers.IsEmpty())
@@ -609,40 +668,49 @@ bool UHttpRequestWf::GetAllHeaders(TMap<FString, FString>& Out_Headers)
 		return false;
 	}
 
-	else
-	{
-		Out_Headers = Temp_Headers;
-		return true;
-	}
+	Out_Headers = Temp_Headers;
+	return true;
 }
 
 bool UHttpRequestWf::GetHeader(FString& ErrorCode, FString& Value, FString Key)
 {
 	if (!this->Task)
 	{
-		ErrorCode = "WF - Task for HTTP Request is null !";
-		return false;
-	}
-	
-	if (!HttpHeaderMap(this->Task->get_req()).key_exists(TCHAR_TO_UTF8(*Key)))
-	{
-		ErrorCode = "WF - HTTP request header is not exist !";
+		ErrorCode = "FF HTTP WF : Task for HTTP Request is null !";
 		return false;
 	}
 
-	FString TempValue = UTF8_TO_TCHAR(HttpHeaderMap(this->Task->get_req()).get(TCHAR_TO_UTF8(*Key)).c_str());
+	FString TempValue;
+
+	try
+	{
+		protocol::HttpRequest* TempReq = this->Task->get_req();
+
+		if (!HttpHeaderMap(TempReq).key_exists(TCHAR_TO_UTF8(*Key)))
+		{
+			ErrorCode = "FF HTTP WF : HTTP request header is not exist !";
+			return false;
+		}
+
+		TempValue = UTF8_TO_TCHAR(HttpHeaderMap(TempReq).get(TCHAR_TO_UTF8(*Key)).c_str());
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetHeader : %s"), *ExceptionString);
+
+		return false;
+	}
 
 	if (TempValue.IsEmpty())
 	{
-		ErrorCode = "WF - HTTP request header is exist but value is empty !";
+		ErrorCode = "FF HTTP WF : HTTP request header is exist but value is empty !";
 		return false;
 	}
 
-	else
-	{
-		Value = TempValue;
-		return true;
-	}
+	Value = TempValue;
+	return true;
 }
 
 bool UHttpRequestWf::GetBody(FString& Out_Body)
@@ -652,18 +720,28 @@ bool UHttpRequestWf::GetBody(FString& Out_Body)
 		return false;
 	}
 
-	FString TempBody = UTF8_TO_TCHAR(HttpUtil::decode_chunked_body(this->Task->get_req()).c_str());
+	FString TempBody;
+
+	try
+	{
+		TempBody = UTF8_TO_TCHAR(HttpUtil::decode_chunked_body(this->Task->get_req()).c_str());
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetBody : %s"), *ExceptionString);
+
+		return false;
+	}
 
 	if (TempBody.IsEmpty())
 	{
 		return false;
 	}
 
-	else
-	{
-		Out_Body = TempBody;
-		return true;
-	}
+	Out_Body = TempBody;
+	return true;
 }
 
 bool UHttpRequestWf::GetMethod(FString& Out_Method)
@@ -673,21 +751,49 @@ bool UHttpRequestWf::GetMethod(FString& Out_Method)
 		return false;
 	}
 
-	Out_Method = this->Task->get_req()->get_method();
+	FString TempMethod;
 
-	return false;
+	try
+	{
+		TempMethod = this->Task->get_req()->get_method();
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetMethod : %s"), *ExceptionString);
+
+		return false;
+	}
+
+	Out_Method = TempMethod;
+	return true;
 }
 
-bool UHttpRequestWf::GetContentLenght(int32& Out_Lenght)
+bool UHttpRequestWf::GetContentLenght(int64& Out_Lenght)
 {
 	if (!this->Task)
 	{
 		return false;
 	}
 
-	Out_Lenght = this->Task->get_req()->get_parser()->content_length;
+	int64 TempLenght = 0;
 
-	return false;
+	try
+	{
+		TempLenght = this->Task->get_req()->get_parser()->content_length;
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetContentLenght : %s"), *ExceptionString);
+
+		return false;
+	}
+
+	Out_Lenght = TempLenght;
+	return true;
 }
 
 bool UHttpRequestWf::GetClientAddress(FString& Out_Address)
@@ -697,31 +803,40 @@ bool UHttpRequestWf::GetClientAddress(FString& Out_Address)
 		return false;
 	}
 
-	sockaddr SocketAddress;
-	memset(&SocketAddress, 0, sizeof(SocketAddress));
-	socklen_t SocketLenght = sizeof SocketAddress;
+	FString IpString;
+	FString PortString;
+	FString TempAddress;
 
-	this->Task->get_peer_addr(&SocketAddress, &SocketLenght);
-	
-	char IP_Address[NI_MAXHOST];
-	char Port[NI_MAXSERV];
-	int ErrorCode = getnameinfo(&SocketAddress, sizeof(SocketAddress), IP_Address, sizeof(IP_Address), Port, sizeof(Port), NI_NUMERICHOST | NI_NUMERICSERV);
-
-	if (ErrorCode != 0)
+	try
 	{
+		sockaddr SocketAddress;
+		memset(&SocketAddress, 0, sizeof(SocketAddress));
+		socklen_t SocketLenght = sizeof(SocketAddress);
+
+		this->Task->get_peer_addr(&SocketAddress, &SocketLenght);
+
+		char IP_Address[NI_MAXHOST];
+		char Port[NI_MAXSERV];
+		int ErrorCode = getnameinfo(&SocketAddress, sizeof(SocketAddress), IP_Address, sizeof(IP_Address), Port, sizeof(Port), NI_NUMERICHOST | NI_NUMERICSERV);
+
+		if (ErrorCode != 0)
+		{
+			return false;
+		}
+
+		IpString.AppendChars(IP_Address, sizeof(IP_Address));
+		PortString.AppendChars(Port, sizeof(Port));
+		TempAddress = FString::Printf(TEXT("%s:%s"), *IpString, *PortString);
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Request->GetClientAddress : %s"), *ExceptionString);
+
 		return false;
 	}
-
-	else
-	{
-		FString IpString;
-		IpString.AppendChars(IP_Address, sizeof(IP_Address));
-
-		FString PortString;
-		PortString.AppendChars(Port, sizeof(Port));
-
-		Out_Address = FString::Printf(TEXT("%s:%s"), *IpString, *PortString);
-
-		return true;
-	}
+	
+	Out_Address = TempAddress;
+	return true;
 }

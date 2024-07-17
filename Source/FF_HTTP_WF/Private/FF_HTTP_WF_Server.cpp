@@ -12,19 +12,13 @@ AHTTP_Server_WF::AHTTP_Server_WF()
 // Called when the game starts or when spawned
 void AHTTP_Server_WF::BeginPlay()
 {
-#ifdef _WIN64
-	this->HTTP_Server_Start();
-#endif
-	
 	Super::BeginPlay();
+	this->HTTP_Server_Start();
 }
 
 void AHTTP_Server_WF::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-#ifdef _WIN64
 	this->HTTP_Server_Stop();
-#endif
-
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -36,58 +30,36 @@ void AHTTP_Server_WF::Tick(float DeltaTime)
 
 bool AHTTP_Server_WF::HTTP_Server_Start()
 {
-#ifdef _WIN64
-	
-	if (this->Server_Name.IsEmpty())
+	auto Callback = [this](WFHttpTask* Task)
+		{
+			UHttpRequestWf* Request = NewObject<UHttpRequestWf>();
+			Request->Task = Task;
+
+			this->OnHttWf_Request(Request);
+			this->DelegateHttpRequest.Broadcast(Request);
+		};
+
+	try
 	{
+		this->WF_Server = MakeShared<WFHttpServer, ESPMode::ThreadSafe>(Callback);
+		this->WF_Server->start(this->Port_HTTP);
+	}
+
+	catch (const std::exception& Exception)
+	{
+		FString ExceptionString = Exception.what();
+		UE_LOG(LogTemp, Warning, TEXT("FF HTTP WF : Thread->Callback_HTTP_Start : %s"), *ExceptionString);
+
 		return false;
 	}
 
-	this->Thread_WF = new FHTTP_Thread_WF(this);
-
-	if (this->Thread_WF)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
-
-#else
-
-	return false;
-
-#endif
+	return true;
 }
 
 void AHTTP_Server_WF::HTTP_Server_Stop()
 {
-#ifdef _WIN64
-	
-	if (this->Thread_WF)
+	if (this->WF_Server.IsValid())
 	{
-		delete this->Thread_WF;
-		return;
+		this->WF_Server->stop();
 	}
-
-	else
-	{
-		return;
-	}
-
-#else
-
-#endif
-}
-
-bool AHTTP_Server_WF::HTTP_Server_Toggle(bool bIsPause)
-{
-	if (!this->Thread_WF)
-	{
-		return false;
-	}
-
-	return this->Thread_WF->Toggle(bIsPause);
 }
