@@ -56,4 +56,4 @@ public:
 
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegateRequestWf, UHttpRequestWf*, Request);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Wf_Request, UHttpRequestWf*, Request);

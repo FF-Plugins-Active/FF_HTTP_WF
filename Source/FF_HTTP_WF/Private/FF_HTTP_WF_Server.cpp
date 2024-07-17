@@ -36,13 +36,15 @@ bool AHTTP_Server_WF::HTTP_Server_Start()
 			Request->Task = Task;
 
 			this->OnHttWf_Request(Request);
-			this->DelegateHttpRequest.Broadcast(Request);
+			this->Delegate_Http_Request.Broadcast(Request);
 		};
+
+	int Result = 0;
 
 	try
 	{
 		this->WF_Server = MakeShared<WFHttpServer, ESPMode::ThreadSafe>(Callback);
-		this->WF_Server->start(this->Port_HTTP);
+		Result = this->WF_Server->start(this->Port_HTTP);
 	}
 
 	catch (const std::exception& Exception)
@@ -53,13 +55,57 @@ bool AHTTP_Server_WF::HTTP_Server_Start()
 		return false;
 	}
 
-	return true;
+	if (Result == 0)
+	{
+		this->Delegate_HTTP_Start.Broadcast();
+		this->OnHttWf_Start();
+		this->bIsServerStarted = true;
+		return true;
+	}
+
+	else
+	{
+		return false;
+	}
 }
 
 void AHTTP_Server_WF::HTTP_Server_Stop()
 {
-	if (this->WF_Server.IsValid())
+	if (this->WF_Server.IsValid() && this->bIsServerStarted)
 	{
 		this->WF_Server->stop();
+		this->Delegate_HTTP_Stop.Broadcast();
+		this->OnHttWf_Stop();
 	}
+}
+
+FString AHTTP_Server_WF::GetListenAddress()
+{
+	if (!this->WF_Server.IsValid() && !this->bIsServerStarted)
+	{
+		return "";
+	}
+
+	sockaddr SocketAddress;
+	memset(&SocketAddress, 0, sizeof(SocketAddress));
+	socklen_t SocketLenght = sizeof(SocketAddress);
+	this->WF_Server->get_listen_addr(&SocketAddress, &SocketLenght);
+
+	char IP_Address[NI_MAXHOST];
+	char Port[NI_MAXSERV];
+	int ErrorCode = getnameinfo(&SocketAddress, sizeof(SocketAddress), IP_Address, sizeof(IP_Address), Port, sizeof(Port), NI_NUMERICHOST | NI_NUMERICSERV);
+
+	if (ErrorCode != 0)
+	{
+		return "";
+	}
+
+	FString IpString;
+	FString PortString;
+
+	IpString.AppendChars(IP_Address, sizeof(IP_Address));
+	PortString.AppendChars(Port, sizeof(Port));
+	const FString TempAddress = FString::Printf(TEXT("%s:%s"), *IpString, *PortString);
+
+	return TempAddress;
 }

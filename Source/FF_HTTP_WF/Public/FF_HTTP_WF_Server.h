@@ -10,6 +10,8 @@
 
 #include "FF_HTTP_WF_Server.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDelegate_Wf);
+
 UCLASS()
 class FF_HTTP_WF_API AHTTP_Server_WF : public AActor
 {
@@ -24,6 +26,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	TSharedPtr<WFHttpServer, ESPMode::ThreadSafe> WF_Server;
+	bool bIsServerStarted = false;
 
 public:	
 
@@ -33,34 +36,37 @@ public:
 	// Called every frame.
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FDelegateRequestWf DelegateHttpRequest;
+	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|Workflow")
+	FDelegate_Wf_Request Delegate_Http_Request;
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "If you want to change API parameter, just put /* to the end. If you don't do that, server won't detect dynamic API requests.", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
-	FString API_URI = "api/*";
+	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|Workflow")
+	FDelegate_Wf Delegate_HTTP_Start;
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|HTTP|Server|Workflow")
+	FDelegate_Wf Delegate_HTTP_Stop;
+
+	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|Workflow")
 	int32 Port_HTTP = 8081;
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|Workflow")
 	int32 Port_HTTPS = 8453;
 
-	UPROPERTY(BlueprintReadOnly, meta = (ToolTip = "", ExposeOnSpawn = "true"), Category = "Frozen Forest|HTTP|Server|POCO")
-	int32 ThreadNum = 4;
-
-	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|Workflow")
 	void OnHttWf_Start();
 
-	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|Workflow")
 	void OnHttWf_Stop();
 
-	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UFUNCTION(BlueprintImplementableEvent, meta = (Description = ""), Category = "Frozen Forest|HTTP|Server|Workflow")
 	void OnHttWf_Request(UHttpRequestWf* Request);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "HTTP Server NGHTTP2 - Start"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "HTTP Server Workflow - Start"), Category = "Frozen Forest|HTTP|Server|Workflow")
 	virtual bool HTTP_Server_Start();
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "HTTP Server NGHTTP2 - Stop"), Category = "Frozen Forest|HTTP|Server|NGHTTP2")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "HTTP Server Workflow - Stop"), Category = "Frozen Forest|HTTP|Server|Workflow")
 	virtual void HTTP_Server_Stop();
+
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "HTTP Server Workflow - Get Listen Address"), Category = "Frozen Forest|HTTP|Server|Workflow")
+	virtual FString GetListenAddress();
 
 };
