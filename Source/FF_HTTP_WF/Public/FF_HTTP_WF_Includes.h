@@ -19,10 +19,6 @@ THIRD_PARTY_INCLUDES_START
 
 #include "Windows/HideWindowsPlatformTypes.h"
 
-#pragma comment (lib, "Ws2_32.lib")
-#pragma comment (lib, "Mswsock.lib")
-#pragma comment (lib, "AdvApi32.lib")
-
 #undef UI
 #endif
 THIRD_PARTY_INCLUDES_END
