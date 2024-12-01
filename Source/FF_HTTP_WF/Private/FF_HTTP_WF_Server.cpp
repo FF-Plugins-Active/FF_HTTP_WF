@@ -9,20 +9,21 @@ AHTTP_Server_WF::AHTTP_Server_WF()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-// Called when the game starts or when spawned
+// Called when the game starts or when spawned.
 void AHTTP_Server_WF::BeginPlay()
 {
 	Super::BeginPlay();
 	this->HTTP_Server_Start();
 }
 
+// Called when the game end or when destroyed.
 void AHTTP_Server_WF::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	this->HTTP_Server_Stop();
 	Super::EndPlay(EndPlayReason);
 }
 
-// Called every frame
+// Called every frame.
 void AHTTP_Server_WF::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
